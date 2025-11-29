@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface FormData {
   name: string;
@@ -48,25 +50,51 @@ export const FeedbackForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    // Placeholder for Student B to integrate Supabase
-    console.log("Form submitted with data:", formData);
-    console.log("TODO: Student B - Replace this with Supabase insert operation");
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            message: formData.message,
+            rating: formData.rating,
+          }
+        ]);
 
-    // Reset form after successful submission
-    setFormData({
-      name: "",
-      email: "",
-      message: "",
-      rating: 0,
-    });
-    setErrors({});
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Thank you for your feedback!",
+      });
+
+      // Reset form after successful submission
+      setFormData({
+        name: "",
+        email: "",
+        message: "",
+        rating: 0,
+      });
+      setErrors({});
+      
+      // Trigger a custom event to notify LatestFeedback to refresh
+      window.dispatchEvent(new Event('feedbackSubmitted'));
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRatingClick = (rating: number) => {
