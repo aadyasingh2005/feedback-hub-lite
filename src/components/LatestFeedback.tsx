@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Feedback {
   name: string;
@@ -12,26 +13,38 @@ interface Feedback {
 export const LatestFeedback = () => {
   const [latestFeedback, setLatestFeedback] = useState<Feedback | null>(null);
 
-  const fetchLatestFeedback = () => {
-    // Placeholder for Student B to integrate Supabase
-    console.log("Fetch latest feedback here");
-    console.log("TODO: Student B - Replace this with Supabase select operation");
-    
-    // Example of what the data structure should look like:
-    // const { data, error } = await supabase
-    //   .from('feedback')
-    //   .select('*')
-    //   .order('created_at', { ascending: false })
-    //   .limit(1)
-    //   .single();
-    //
-    // if (data) {
-    //   setLatestFeedback(data);
-    // }
+  const fetchLatestFeedback = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('feedback')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setLatestFeedback(data);
+      }
+    } catch (error) {
+      console.error('Error fetching latest feedback:', error);
+    }
   };
 
   useEffect(() => {
     fetchLatestFeedback();
+    
+    // Listen for new feedback submissions
+    const handleFeedbackSubmitted = () => {
+      fetchLatestFeedback();
+    };
+    
+    window.addEventListener('feedbackSubmitted', handleFeedbackSubmitted);
+    
+    return () => {
+      window.removeEventListener('feedbackSubmitted', handleFeedbackSubmitted);
+    };
   }, []);
 
   return (
